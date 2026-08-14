@@ -178,7 +178,7 @@ function App() {
             <span className="logo-gold">THE</span>
             <span className="logo-red">CLUB</span>
           </button>
-          <span className="header-subtitle">Salón de Cine Elegante</span>
+          <span className="header-subtitle">Reseña y Califica tus Películas</span>
         </div>
       </header>
 

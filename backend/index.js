@@ -66,14 +66,59 @@ app.get('/api/movies/search', async (req, res) => {
   }
 
   try {
-    const data = await fetchFromTMDB('/search/movie', { query, language: 'es-ES' });
-    
-    if (!data.results || data.results.length === 0) {
+    // Búsqueda clásica por título
+    const movieData = await fetchFromTMDB('/search/movie', { query, language: 'es-ES' }).catch(() => ({ results: [] }));
+    let movieResults = (movieData.results || []).map(m => ({
+      id: m.id,
+      title: m.title,
+      release_date: m.release_date,
+      poster_path: m.poster_path,
+      popularity: m.popularity || 0
+    }));
+
+    // Búsqueda por persona (Director)
+    const personData = await fetchFromTMDB('/search/person', { query, language: 'es-ES' }).catch(() => ({ results: [] }));
+    const people = personData.results || [];
+
+    if (people.length > 0) {
+      // Tomamos la coincidencia de persona más relevante
+      const topPerson = people[0];
+      try {
+        // Consultar los créditos cinematográficos de esa persona
+        const credits = await fetchFromTMDB(`/person/${topPerson.id}/movie_credits`, { language: 'es-ES' });
+        // Filtrar solo las películas donde la persona trabajó como Director
+        const directedMovies = (credits.crew || [])
+          .filter(c => c.job === 'Director')
+          .map(m => ({
+            id: m.id,
+            title: m.title,
+            release_date: m.release_date,
+            poster_path: m.poster_path,
+            popularity: m.popularity || 0
+          }));
+
+        // Combinar con la búsqueda clásica evitando duplicar películas
+        const existingIds = new Set(movieResults.map(m => m.id));
+        for (const movie of directedMovies) {
+          if (!existingIds.has(movie.id)) {
+            movieResults.push(movie);
+            existingIds.add(movie.id);
+          }
+        }
+      } catch (err) {
+        console.warn(`No se pudieron obtener créditos de director para la persona ${topPerson.id}:`, err);
+      }
+    }
+
+    if (movieResults.length === 0) {
       return res.status(404).json({ error: "No se encontraron películas para tu búsqueda" });
     }
+
+    // Ordenar todas las películas por su popularidad en TMDB de forma descendente (más relevantes primero)
+    movieResults.sort((a, b) => b.popularity - a.popularity);
     
     // Mapear los resultados agregando el avgScore calculado localmente
-    const results = data.results.map(movie => {
+    const results = movieResults.map(movie => {
       const movieReviews = reviews.filter(r => r.tmdbId === movie.id);
       const avgScore = movieReviews.length > 0
         ? parseFloat((movieReviews.reduce((sum, r) => sum + r.score, 0) / movieReviews.length).toFixed(1))

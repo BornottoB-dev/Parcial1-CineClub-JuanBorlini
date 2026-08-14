@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import './App.css';
 
 // Importación de componentes modulares
 import SearchBar from './components/SearchBar';
@@ -56,16 +55,20 @@ function App() {
   const [searchedTerm, setSearchedTerm] = useState('');
 
   // Función para realizar la búsqueda
-  const handleSearch = async (e) => {
+  const handleSearch = async (e, customQuery) => {
     if (e) e.preventDefault();
-    if (!searchQuery.trim()) return;
+    const queryToSearch = customQuery || searchQuery;
+    if (!queryToSearch.trim()) return;
 
     setLoading(true);
     setError(null);
     setHasSearched(true);
-    setSearchedTerm(searchQuery);
+    setSearchedTerm(queryToSearch);
+    if (customQuery) {
+      setSearchQuery(customQuery);
+    }
     try {
-      const response = await fetch(`${API_BASE}/movies/search?q=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${API_BASE}/movies/search?q=${encodeURIComponent(queryToSearch)}`);
       if (response.status === 404) {
         setMovies([]);
         return;
@@ -81,6 +84,14 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Función al hacer clic en el nombre de un director
+  const handleDirectorClick = (directorName) => {
+    setSelectedMovie(null);
+    setSelectedMovieId(null);
+    setView('search');
+    handleSearch(null, directorName);
   };
 
   // Función para cargar los detalles de una película
@@ -295,6 +306,7 @@ function App() {
             detailLoading={detailLoading}
             detailError={detailError}
             handleBackToSearch={handleBackToSearch}
+            onDirectorClick={handleDirectorClick}
             reviewToDelete={reviewToDelete}
             setReviewToDelete={setReviewToDelete}
             handleReviewDelete={handleReviewDelete}

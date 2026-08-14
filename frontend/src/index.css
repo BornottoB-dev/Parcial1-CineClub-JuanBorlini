@@ -621,6 +621,15 @@ input, textarea {
 .badge.director {
   border-color: var(--primary-red);
   color: var(--text-light);
+  transition: var(--transition-smooth);
+}
+
+.badge.director.clickable-director:hover {
+  cursor: pointer;
+  background-color: var(--primary-red);
+  color: var(--text-light);
+  box-shadow: 0 0 12px rgba(196, 28, 36, 0.6);
+  transform: translateY(-2px);
 }
 
 /* Calificaciones y Estrellas */

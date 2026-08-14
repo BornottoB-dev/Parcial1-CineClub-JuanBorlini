@@ -44,6 +44,7 @@ const MovieDetail = ({
   detailLoading,
   detailError,
   handleBackToSearch,
+  onDirectorClick,
   reviewToDelete,
   setReviewToDelete,
   handleReviewDelete,
@@ -140,7 +141,13 @@ const MovieDetail = ({
                 <span className="badge runtime">{movie.runtime} min</span>
               )}
               {movie.director && (
-                <span className="badge director">Director: {movie.director}</span>
+                <span 
+                  className="badge director clickable-director" 
+                  onClick={() => onDirectorClick && onDirectorClick(movie.director)}
+                  title={`Buscar más películas de ${movie.director}`}
+                >
+                  Director: {movie.director}
+                </span>
               )}
             </div>
 

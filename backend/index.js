@@ -3,10 +3,20 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Middleware de logging para todas las requests
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+});
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
@@ -35,7 +45,9 @@ async function fetchFromTMDB(endpoint, params = {}) {
   
   const response = await fetch(url.toString(), { headers });
   if (!response.ok) {
-    throw new Error(`TMDB API Error: ${response.status} ${response.statusText}`);
+    const err = new Error(`TMDB API Error: ${response.status} ${response.statusText}`);
+    err.status = response.status;
+    throw err;
   }
   return response.json();
 }
@@ -55,6 +67,10 @@ app.get('/api/movies/search', async (req, res) => {
 
   try {
     const data = await fetchFromTMDB('/search/movie', { query, language: 'es-ES' });
+    
+    if (!data.results || data.results.length === 0) {
+      return res.status(404).json({ error: "No se encontraron películas para tu búsqueda" });
+    }
     
     // Mapear los resultados agregando el avgScore calculado localmente
     const results = data.results.map(movie => {
@@ -123,6 +139,9 @@ app.get('/api/movies/:tmdbId', async (req, res) => {
     });
   } catch (error) {
     console.error(`Error al obtener detalles de la película ${tmdbId}:`, error);
+    if (error.status === 404) {
+      return res.status(404).json({ error: "Película no encontrada en TMDB" });
+    }
     res.status(500).json({ error: "Error al comunicarse con la API de TMDB" });
   }
 });
@@ -146,7 +165,7 @@ app.post('/api/movies/:tmdbId/reviews', (req, res) => {
   }
 
   const newReview = {
-    id: reviews.length > 0 ? Math.max(...reviews.map(r => r.id)) + 1 : 1,
+    id: Date.now(),
     tmdbId,
     author: author.trim(),
     score: parsedScore,

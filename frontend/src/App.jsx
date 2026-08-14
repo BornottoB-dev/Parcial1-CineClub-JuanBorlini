@@ -46,6 +46,8 @@ function App() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState(null);
   const [reviewToDelete, setReviewToDelete] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchedTerm, setSearchedTerm] = useState('');
 
   // Función para realizar la búsqueda
   const handleSearch = async (e) => {
@@ -54,9 +56,15 @@ function App() {
 
     setLoading(true);
     setError(null);
+    setHasSearched(true);
+    setSearchedTerm(searchQuery);
     try {
       // Ajustado a /api/movies/search?q=:query
       const response = await fetch(`${API_BASE}/movies/search?q=${encodeURIComponent(searchQuery)}`);
+      if (response.status === 404) {
+        setMovies([]);
+        return;
+      }
       if (!response.ok) {
         throw new Error('Error al buscar películas en el servidor.');
       }
@@ -79,14 +87,14 @@ function App() {
 
     try {
       const response = await fetch(`${API_BASE}/movies/${movieId}`);
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error('Error al obtener los detalles de la película.');
+        throw new Error(data.error || 'Error al obtener los detalles de la película.');
       }
-      const data = await response.json();
       setSelectedMovie(data);
     } catch (err) {
       console.error(err);
-      setDetailError('Error al cargar la información detallada.');
+      setDetailError(err.message);
     } finally {
       setDetailLoading(false);
     }
@@ -99,6 +107,8 @@ function App() {
     setSelectedMovieId(null);
     setSearchQuery('');
     setMovies([]);
+    setHasSearched(false);
+    setSearchedTerm('');
   };
 
   // Función para enviar una reseña
@@ -300,6 +310,12 @@ function App() {
                   ))}
                 </div>
               </section>
+            ) : hasSearched ? (
+              <div className="welcome-banner animate-fade-in">
+                <TicketIcon />
+                <h3>No se encontraron resultados</h3>
+                <p>No pudimos encontrar ninguna película que coincida con "{searchedTerm}". Intenta con otros términos.</p>
+              </div>
             ) : (
               <div className="welcome-banner">
                 <TicketIcon />

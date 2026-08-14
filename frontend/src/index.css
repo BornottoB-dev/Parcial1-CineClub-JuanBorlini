@@ -329,6 +329,20 @@ input, textarea {
 .welcome-banner svg {
   margin-bottom: 20px;
   filter: drop-shadow(0 0 8px rgba(223, 177, 91, 0.3));
+  transition: var(--transition-smooth);
+  cursor: pointer;
+}
+
+.welcome-banner:hover svg {
+  opacity: 0.5 !important;
+  filter: drop-shadow(0 0 10px rgba(223, 177, 91, 0.5));
+}
+
+.welcome-banner svg:hover {
+  opacity: 0.9 !important;
+  color: var(--accent-gold-hover) !important;
+  filter: drop-shadow(0 0 18px rgba(223, 177, 91, 0.9)) !important;
+  transform: scale(1.1) rotate(-6deg);
 }
 
 .welcome-banner h3 {

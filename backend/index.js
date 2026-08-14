@@ -159,9 +159,9 @@ app.post('/api/movies/:tmdbId/reviews', (req, res) => {
     return res.status(400).json({ error: "Faltan campos obligatorios (author, score, comment)" });
   }
 
-  const parsedScore = parseInt(score);
+  const parsedScore = parseFloat(score);
   if (isNaN(parsedScore) || parsedScore < 1 || parsedScore > 5) {
-    return res.status(400).json({ error: "El puntaje (score) debe ser un número entero entre 1 y 5" });
+    return res.status(400).json({ error: "El puntaje (score) debe estar entre 1 y 5" });
   }
 
   const newReview = {

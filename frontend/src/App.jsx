@@ -13,6 +13,19 @@ const TicketIcon = () => (
   </svg>
 );
 
+// Icono SVG de proyector de cine clásico
+const ProjectorIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="logo-icon-svg">
+    <circle cx="7" cy="7" r="4" />
+    <circle cx="7" cy="7" r="1.5" fill="currentColor" />
+    <circle cx="16" cy="6" r="3.5" />
+    <circle cx="16" cy="6" r="1.2" fill="currentColor" />
+    <rect x="3" y="11" width="14" height="9" rx="2" />
+    <path d="m17 13 5-3v8l-5-3Z" fill="currentColor" opacity="0.3" />
+    <path d="m17 13 5-3v8l-5-3Z" />
+  </svg>
+);
+
 function App() {
   const [view, setView] = useState('search'); // 'search' o 'detail'
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,6 +45,7 @@ function App() {
   const [formContent, setFormContent] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewError, setReviewError] = useState(null);
+  const [reviewToDelete, setReviewToDelete] = useState(null);
 
   // Función para realizar la búsqueda
   const handleSearch = async (e) => {
@@ -41,7 +55,8 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/movies?query=${encodeURIComponent(searchQuery)}`);
+      // Ajustado a /api/movies/search?q=:query
+      const response = await fetch(`${API_BASE}/movies/search?q=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) {
         throw new Error('Error al buscar películas en el servidor.');
       }
@@ -77,11 +92,13 @@ function App() {
     }
   };
 
-  // Función para volver a la búsqueda
+  // Función para volver a la búsqueda (resetea el estado completo al inicio)
   const handleBackToSearch = () => {
     setView('search');
     setSelectedMovie(null);
     setSelectedMovieId(null);
+    setSearchQuery('');
+    setMovies([]);
   };
 
   // Función para enviar una reseña
@@ -101,10 +118,11 @@ function App() {
         headers: {
           'Content-Type': 'application/json'
         },
+        // Propiedades adaptadas a: author, score, comment
         body: JSON.stringify({
-          name: formName,
-          content: formContent,
-          rating: formRating
+          author: formName,
+          score: formRating,
+          comment: formContent
         })
       });
 
@@ -121,13 +139,13 @@ function App() {
         const updatedReviews = [newReview, ...(prev.reviews || [])];
         const newCount = updatedReviews.length;
         const newAverage = parseFloat(
-          (updatedReviews.reduce((sum, r) => sum + r.rating, 0) / newCount).toFixed(1)
+          (updatedReviews.reduce((sum, r) => sum + r.score, 0) / newCount).toFixed(1)
         );
         return {
           ...prev,
           reviews: updatedReviews,
           reviewCount: newCount,
-          averageRating: newAverage
+          avgScore: newAverage
         };
       });
 
@@ -139,6 +157,39 @@ function App() {
       setReviewError(err.message);
     } finally {
       setSubmittingReview(false);
+    }
+  };
+
+  // Función para eliminar una reseña
+  const handleReviewDelete = async (reviewId) => {
+    try {
+      const response = await fetch(`${API_BASE}/reviews/${reviewId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar la reseña del servidor.');
+      }
+
+      // Actualizar el estado local para quitar la reseña y recalcular avgScore
+      setSelectedMovie((prev) => {
+        if (!prev) return null;
+        const updatedReviews = (prev.reviews || []).filter(r => r.id !== reviewId);
+        const newCount = updatedReviews.length;
+        const newAverage = newCount > 0
+          ? parseFloat((updatedReviews.reduce((sum, r) => sum + r.score, 0) / newCount).toFixed(1))
+          : null;
+        return {
+          ...prev,
+          reviews: updatedReviews,
+          reviewCount: newCount,
+          avgScore: newAverage
+        };
+      });
+      setReviewToDelete(null);
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
     }
   };
 
@@ -175,6 +226,7 @@ function App() {
       <header className="app-header">
         <div className="header-content">
           <button className="logo-btn" onClick={handleBackToSearch}>
+            <ProjectorIcon />
             <span className="logo-gold">THE</span>
             <span className="logo-red">CLUB</span>
           </button>
@@ -239,7 +291,8 @@ function App() {
                         <div className="card-meta">
                           <span className="card-year">{getYear(movie.release_date)}</span>
                           <span className="card-score">
-                            ★ {movie.averageRating !== null && movie.averageRating !== undefined ? movie.averageRating : 'N/A'}
+                            {/* Adaptado a movie.avgScore */}
+                            ★ {movie.avgScore !== null && movie.avgScore !== undefined ? movie.avgScore : 'N/A'}
                           </span>
                         </div>
                       </div>
@@ -307,7 +360,8 @@ function App() {
                     </div>
 
                     <div className="detail-rating-score">
-                      {renderStars(selectedMovie.averageRating)}
+                      {/* Adaptado a selectedMovie.avgScore */}
+                      {renderStars(selectedMovie.avgScore)}
                       <span className="review-count-badge">
                         ({selectedMovie.reviewCount || 0} {selectedMovie.reviewCount === 1 ? 'reseña' : 'reseñas'})
                       </span>
@@ -334,28 +388,54 @@ function App() {
                     {selectedMovie.reviews && selectedMovie.reviews.length > 0 ? (
                       <div className="reviews-container">
                         {selectedMovie.reviews.map((review) => (
-                          <div key={review.id} className="review-card">
-                            <div className="review-card-header">
-                              <div className="review-author">
-                                <span className="avatar-letter">
-                                  {review.name ? review.name.charAt(0).toUpperCase() : '?'}
-                                </span>
-                                <h4>{review.name}</h4>
+                          <div key={review.id} className="review-card animate-fade-in">
+                            {reviewToDelete === review.id ? (
+                              <div className="review-delete-confirm">
+                                <p>¿Seguro que deseas eliminar esta reseña?</p>
+                                <div className="confirm-buttons">
+                                  <button className="btn-cancel-delete" onClick={() => setReviewToDelete(null)}>
+                                    Cancelar
+                                  </button>
+                                  <button className="btn-confirm-delete" onClick={() => handleReviewDelete(review.id)}>
+                                    Eliminar
+                                  </button>
+                                </div>
                               </div>
-                              <div className="review-rating">
-                                {Array.from({ length: 5 }).map((_, idx) => (
-                                  <span
-                                    key={idx}
-                                    className={`star-small ${idx < review.rating ? 'filled' : ''}`}
-                                  >
-                                    ★
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                            <p className="review-content-text">{review.content}</p>
-                            {review.createdAt && (
-                              <span className="review-date">{review.createdAt}</span>
+                            ) : (
+                              <>
+                                <div className="review-card-header">
+                                  <div className="review-author">
+                                    <span className="avatar-letter">
+                                      {/* Adaptado a review.author */}
+                                      {review.author ? review.author.charAt(0).toUpperCase() : '?'}
+                                    </span>
+                                    {/* Adaptado a review.author */}
+                                    <h4>{review.author}</h4>
+                                  </div>
+                                  <div className="review-meta-right">
+                                    <div className="review-rating">
+                                      {/* Adaptado a review.score */}
+                                      {Array.from({ length: 5 }).map((_, idx) => (
+                                        <span
+                                          key={idx}
+                                          className={`star-small ${idx < review.score ? 'filled' : ''}`}
+                                        >
+                                          ★
+                                        </span>
+                                      ))}
+                                    </div>
+                                    {/* Botón para eliminar reseña */}
+                                    <button className="btn-delete-review" onClick={() => setReviewToDelete(review.id)} title="Eliminar reseña">
+                                      ✕
+                                    </button>
+                                  </div>
+                                </div>
+                                {/* Adaptado a review.comment */}
+                                <p className="review-content-text">{review.comment}</p>
+                                {review.createdAt && (
+                                  <span className="review-date">{review.createdAt}</span>
+                                )}
+                              </>
                             )}
                           </div>
                         ))}

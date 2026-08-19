@@ -140,6 +140,41 @@ app.get('/api/movies/search', async (req, res) => {
   }
 });
 
+// 5. GET /api/movies/featured
+app.get('/api/movies/featured', async (req, res) => {
+  try {
+    const popularData = await fetchFromTMDB('/movie/popular', { language: 'es-ES' }).catch(() => ({ results: [] }));
+    let movieResults = (popularData.results || []).map(m => ({
+      id: m.id,
+      title: m.title,
+      release_date: m.release_date,
+      poster_path: m.poster_path,
+      popularity: m.popularity || 0
+    }));
+
+    // Mapear los resultados agregando el avgScore calculado localmente
+    const results = movieResults.map(movie => {
+      const movieReviews = reviews.filter(r => r.tmdbId === movie.id);
+      const avgScore = movieReviews.length > 0
+        ? parseFloat((movieReviews.reduce((sum, r) => sum + r.score, 0) / movieReviews.length).toFixed(1))
+        : null;
+
+      return {
+        id: movie.id,
+        title: movie.title,
+        release_date: movie.release_date,
+        poster_path: movie.poster_path,
+        avgScore
+      };
+    });
+
+    res.json(results);
+  } catch (error) {
+    console.error("Error al obtener películas destacadas en TMDB:", error);
+    res.status(500).json({ error: "Error al comunicarse con la API de TMDB" });
+  }
+});
+
 // 2. GET /api/movies/:tmdbId
 app.get('/api/movies/:tmdbId', async (req, res) => {
   const tmdbId = parseInt(req.params.tmdbId);

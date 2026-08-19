@@ -1,10 +1,10 @@
 import React from 'react';
 import MovieCard from './MovieCard';
 
-const MovieGrid = ({ movies, handleMovieSelect }) => {
+const MovieGrid = ({ movies, handleMovieSelect, title = "Resultados de la Búsqueda" }) => {
   return (
     <section className="results-section animate-fade-in">
-      <h3 className="results-title">Resultados de la Búsqueda</h3>
+      <h3 className="results-title">{title}</h3>
       <div className="movie-grid">
         {movies.map((movie) => (
           <MovieCard

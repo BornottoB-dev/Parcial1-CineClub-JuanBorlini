@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Importación de componentes modulares
 import SearchBar from './components/SearchBar';
@@ -18,18 +18,6 @@ const TicketIcon = () => (
   </svg>
 );
 
-// Icono SVG de proyector de cine clásico para el Logotipo
-const ProjectorIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="logo-icon-svg">
-    <circle cx="7" cy="7" r="4" />
-    <circle cx="7" cy="7" r="1.5" fill="currentColor" />
-    <circle cx="16" cy="6" r="3.5" />
-    <circle cx="16" cy="6" r="1.2" fill="currentColor" />
-    <rect x="3" y="11" width="14" height="9" rx="2" />
-    <path d="m17 13 5-3v8l-5-3Z" fill="currentColor" opacity="0.3" />
-    <path d="m17 13 5-3v8l-5-3Z" />
-  </svg>
-);
 
 function App() {
   const [view, setView] = useState('search'); // 'search' o 'detail'
@@ -53,6 +41,32 @@ function App() {
   const [reviewToDelete, setReviewToDelete] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchedTerm, setSearchedTerm] = useState('');
+
+  // Estados de películas destacadas
+  const [featuredMovies, setFeaturedMovies] = useState([]);
+  const [featuredLoading, setFeaturedLoading] = useState(false);
+  const [featuredError, setFeaturedError] = useState(null);
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      setFeaturedLoading(true);
+      setFeaturedError(null);
+      try {
+        const response = await fetch(`${API_BASE}/movies/featured`);
+        if (!response.ok) {
+          throw new Error('Error al obtener películas destacadas.');
+        }
+        const data = await response.json();
+        setFeaturedMovies(data);
+      } catch (err) {
+        console.error(err);
+        setFeaturedError('No se pudieron cargar las películas destacadas.');
+      } finally {
+        setFeaturedLoading(false);
+      }
+    };
+    fetchFeatured();
+  }, []);
 
   // Función para realizar la búsqueda
   const handleSearch = async (e, customQuery) => {
@@ -181,6 +195,25 @@ function App() {
         const newAverage = parseFloat(
           (updatedReviews.reduce((sum, r) => sum + r.score, 0) / newCount).toFixed(1)
         );
+
+        // Actualizar en la lista de películas de búsqueda si existe
+        setMovies((prevMovies) =>
+          prevMovies.map((m) =>
+            m.id === selectedMovieId
+              ? { ...m, avgScore: newAverage }
+              : m
+          )
+        );
+
+        // Actualizar en la lista de películas destacadas si existe
+        setFeaturedMovies((prevFeatured) =>
+          prevFeatured.map((m) =>
+            m.id === selectedMovieId
+              ? { ...m, avgScore: newAverage }
+              : m
+          )
+        );
+
         return {
           ...prev,
           reviews: updatedReviews,
@@ -221,6 +254,25 @@ function App() {
         const newAverage = newCount > 0
           ? parseFloat((updatedReviews.reduce((sum, r) => sum + r.score, 0) / newCount).toFixed(1))
           : null;
+
+        // Actualizar en la lista de películas de búsqueda si existe
+        setMovies((prevMovies) =>
+          prevMovies.map((m) =>
+            m.id === selectedMovieId
+              ? { ...m, avgScore: newAverage }
+              : m
+          )
+        );
+
+        // Actualizar en la lista de películas destacadas si existe
+        setFeaturedMovies((prevFeatured) =>
+          prevFeatured.map((m) =>
+            m.id === selectedMovieId
+              ? { ...m, avgScore: newAverage }
+              : m
+          )
+        );
+
         return {
           ...prev,
           reviews: updatedReviews,
@@ -241,9 +293,9 @@ function App() {
       <header className="app-header">
         <div className="header-content">
           <button className="logo-btn" onClick={handleBackToHome}>
-            <ProjectorIcon />
-            <span className="logo-gold">THE</span>
-            <span className="logo-red">CLUB</span>
+            <span className="logo-the">The</span>
+            <span className="logo-gold">Video</span>
+            <span className="logo-red">Club</span>
           </button>
           <span className="header-subtitle">Reseña y Califica tus Películas Favoritas</span>
         </div>
@@ -291,11 +343,33 @@ function App() {
                 <p>No pudimos encontrar ninguna película que coincida con "{searchedTerm}". Intenta con otros términos.</p>
               </div>
             ) : (
-              /* Bienvenidos */
-              <div className="welcome-banner">
-                <TicketIcon />
-                <h3>Bienvenidos a The Club</h3>
-                <p>Encuentra tus películas favoritas, lee reseñas y comparte tu opinión.</p>
+              /* Bienvenidos y Películas Destacadas */
+              <div className="animate-fade-in">
+                <div className="welcome-banner">
+                  <TicketIcon />
+                  <h3>Bienvenidos a The Club</h3>
+                  <p>Encuentra tus películas favoritas, lee reseñas y comparte tu opinión.</p>
+                </div>
+
+                {featuredLoading ? (
+                  <div className="loading-container" style={{ marginTop: '40px' }}>
+                    <div className="curtain-loader"></div>
+                    <p>Cargando películas destacadas...</p>
+                  </div>
+                ) : featuredError ? (
+                  <div className="error-state" style={{ marginTop: '40px' }}>
+                    <div className="error-card">
+                      <h3>Fallo en la Proyección</h3>
+                      <p>{featuredError}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <MovieGrid
+                    movies={featuredMovies}
+                    handleMovieSelect={handleMovieSelect}
+                    title="Películas Destacadas"
+                  />
+                )}
               </div>
             )}
           </div>

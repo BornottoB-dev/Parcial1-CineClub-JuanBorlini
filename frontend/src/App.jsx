@@ -4,19 +4,10 @@ import { useState, useEffect } from 'react';
 import SearchBar from './components/SearchBar';
 import MovieGrid from './components/MovieGrid';
 import MovieDetail from './components/MovieDetail';
+import TicketIcon from './components/TicketIcon';
 
 // Cargar URL base del backend desde variables de entorno con fallback a localhost:3000
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
-// Icono SVG de ticket de cine para usar como fallback y decoraciones
-const TicketIcon = () => (
-  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.2, color: 'var(--accent-gold)' }}>
-    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
-    <path d="M13 5v2" />
-    <path d="M13 17v2" />
-    <path d="M13 11v2" />
-  </svg>
-);
 
 
 function App() {
